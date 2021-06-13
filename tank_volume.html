@@ -1,0 +1,292 @@
+<!--
+  Copyright 2021, Bart Butenaers
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<script type="text/javascript">
+    var tankTypes = [
+        {v:"none"        , t:""},
+        {v:"horiz_cylin" , t:"Horizontal cylinder"},
+        {v:"vert_cylin"  , t:"Vertical cylinder"},
+        {v:"rect_prism"  , t:"Rectangular prism (box)"},
+        {v:"cone_top"    , t:"Cone top"},
+        {v:"cone_bottom" , t:"Cone bottom"},
+        {v:"horiz_caps"  , t:"Horizontal capsule"},
+        {v:"vert_caps"   , t:"Vertical capsule"},
+        {v:"inv_piram"   , t:"Inverse piramid"},
+        {v:"horiz_oval"  , t:"Horizontal oval (elliptical)"},
+        {v:"vert_oval"   , t:"Vertical oval (elliptical)"},
+        {v:"frustrum"    , t:"Frustum (truncated cone)"},
+        {v:"sphere"      , t:"Sphere"},
+        {v:"horiz_ellip" , t:"Horizontal elliptical"}
+        
+    ];
+
+    RED.nodes.registerType('tank-volume',{
+        category: 'smart home',
+        color: '#E9967A',
+        defaults: {
+            name: {value:""},      
+            tankType: {value:""},
+            inputField: {value:"payload"},
+            outputField: {value:"payload"},
+            measurement: {value:"above"},
+            inputUnit: {value:"cm"},
+            outputUnit: {value:"l"},
+            diameter: {value: 0},
+            length: {value: 0},
+            width: {value: 0},
+            height: {value: 0},
+            length2: {value: 0},
+            width2: {value: 0},
+            height2: {value: 0},
+            coneHeight: {value: 0},
+            cylinderHeight: {value: 0},
+            diameterTop: {value: 0},
+            diameterBottom: {value: 0}
+        },        
+        inputs:1,
+        outputs:1,
+        icon: "font-awesome/fa-battery-full",
+        label: function() {
+            var tankTypeText = "";
+
+            // Get the tank type text, based on the tank type value
+            for (var i = 0; i < tankTypes.length; i++) {
+               if (tankTypes[i].v === this.tankType) {
+                   tankTypeText = tankTypes[i].t;
+                   break;
+               }
+            }
+            
+            return this.name || tankTypeText || "Tank volume";
+        },    
+        oneditprepare: function() {
+            // Show the inputField value in a typedinput element (dropdown with only 'msg')
+            $("#node-input-inputField").typedInput({
+                default: 'msg',
+                types:['msg']
+            });
+       
+            // Show the outputField value in a typedinput element (dropdown with only 'msg')
+            $("#node-input-outputField").typedInput({
+                default: 'msg',
+                types:['msg']
+            });
+            
+            // Dynamically show all tank type options in the dropdown
+            for (var i = 0; i < tankTypes.length; i++) {
+                var value = tankTypes[i].v;
+                var text = tankTypes[i].t;
+                $('#node-input-tankType').append($("<option></option>").attr("value", value).text(text));
+            }
+            
+            // Make sure the selected value is also selected in the <select> tag
+            $('#node-input-tankType').val(this.tankType);
+        
+            var imageElement =  $("#tank-image");
+            
+            // When the tank type value changes, only the corresponding field(s) input fields should be displayed
+            $("#node-input-tankType").change(function() {
+                if (this.value && this.value !== "" && this.value !== "none") {
+                    // Show the image of the selected tank
+                    imageElement.attr("src", 'tank-volume/' + this.value + '.png');
+                    imageElement.show();
+                }
+                else {
+                    imageElement.attr("src", '');
+                    imageElement.hide();
+                }
+            
+                // Hide all tank type related properties
+                $(".tankType-property").hide();
+                
+                // Show the properties related to the selected tank type
+                switch(this.value) {
+                    case "horiz_cylin":
+                        $("#node-diameter-div").show();
+                        $("#node-length-div").show();
+                        break;
+                    case "vert_cylin":
+                        $("#node-diameter-div").show();
+                        $("#node-height-div").show();
+                        break;
+                    case "rect_prism":
+                        $("#node-width-div").show();
+                        $("#node-length-div").show();
+                        $("#node-height-div").show();
+                        break;
+                    case "cone_top":
+                        $("#node-coneHeight-div").show();
+                        $("#node-cylinderHeight-div").show();
+                        $("#node-diameterTop-div").show();
+                        $("#node-diameterBottom-div").show();
+                        break;
+                    case "cone_bottom":
+                        $("#node-coneHeight-div").show();
+                        $("#node-cylinderHeight-div").show();
+                        $("#node-diameterTop-div").show();
+                        $("#node-diameterBottom-div").show();
+                        break;
+                    case "inv_piram":
+                        $("#node-width-div").show();
+                        $("#node-length-div").show();
+                        $("#node-height-div").show();
+                        $("#node-width2-div").show();
+                        $("#node-length2-div").show();
+                        $("#node-height2-div").show();
+                        break;
+                    case "horiz_caps":
+                        $("#node-diameter-div").show();
+                        $("#node-length-div").show();
+                        break;
+                    case "vert_caps":
+                        $("#node-diameter-div").show();
+                        $("#node-length-div").show();
+                        break;
+                    case "horiz_oval":
+                    case "vert_oval":
+                        $("#node-width-div").show();
+                        $("#node-length-div").show();
+                        $("#node-height-div").show();
+                        break;
+                    case "frustrum":
+                        $("#node-height-div").show();
+                        $("#node-diameterTop-div").show();
+                        $("#node-diameterBottom-div").show();
+                        break;
+                    case "sphere":
+                        $("#node-diameter-div").show();
+                        break;
+                    case "horiz_ellip":
+                        $("#node-diameter-div").show();                    
+                        $("#node-length-div").show();
+                    break;
+                }
+            });
+            $("#node-input-tankType").change();
+        },
+        oneditsave: function() {
+
+        }
+    });
+</script>
+
+<script type="text/x-red" data-template-name="tank-volume">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-inputField"><i class="fa fa-sign-in"></i> Input field</label>
+        <input id="node-input-inputField" type="text" style="width: 70%">
+    </div>  
+    <div class="form-row">
+        <label for="node-input-outputField"><i class="fa fa-sign-out"></i> Output field</label>
+        <input id="node-input-outputField" type="text" style="width: 70%">
+    </div>   
+    <div class="form-row">
+        <label for="node-input-measurement"><i class="fa fa-download"></i> Measure</label>
+        <select id="node-input-measurement">
+            <option value="fluid">Height of fluid</option>
+            <option value="above">Height above fluid</option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-inputUnit"><i class="fa fa-sign-in"></i> Input unit</label>
+        <select id="node-input-inputUnit">
+            <option value="cm">Centimeters</option>
+            <option value="in">Inches</option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-outputUnit"><i class="fa fa-sign-out"></i> Output unit</label>
+        <select id="node-input-outputUnit">
+            <option value="cm3">Cubic centimeters</option>
+            <option value="l">Litres</option>
+            <option value="in3">Cubic inches</option>
+            <option value="gal">Gallons (US)</option>
+        </select>
+    </div>
+    </br>
+    <div class="form-row">
+        <label for="node-input-tankType"><i class="fa fa-battery-full"></i> Tank type</label>
+        <select id="node-input-tankType">
+            <!-- The options will be added programmatically -->
+        </select>
+    </div>
+    <div class="form-row tankType-property" id="node-diameter-div">
+        <label for="node-input-diameter"><i class="fa fa-cog"></i> Diameter</label>
+        <input id="node-input-diameter" type="number" style="width: 70%">
+    </div>       
+    <div class="form-row tankType-property" id="node-length-div">
+        <label for="node-input-length"><i class="fa fa-cog"></i> Length</label>
+        <input id="node-input-length" type="number" style="width: 70%">
+    </div>     
+    <div class="form-row tankType-property" id="node-width-div">
+        <label for="node-input-width"><i class="fa fa-cog"></i> Width</label>
+        <input id="node-input-width" type="number" style="width: 70%">
+    </div>             
+    <div class="form-row tankType-property" id="node-height-div">
+        <label for="node-input-height"><i class="fa fa-cog"></i> Height</label>
+        <input id="node-input-height" type="number" style="width: 70%">
+    </div>          
+    <div class="form-row tankType-property" id="node-length2-div">
+        <label for="node-input-length2"><i class="fa fa-cog"></i> Length 2</label>
+        <input id="node-input-length2" type="number" style="width: 70%">
+    </div>     
+    <div class="form-row tankType-property" id="node-width2-div">
+        <label for="node-input-width2"><i class="fa fa-cog"></i> Width 2</label>
+        <input id="node-input-width2" type="number" style="width: 70%">
+    </div>             
+    <div class="form-row tankType-property" id="node-height2-div">
+        <label for="node-input-height2"><i class="fa fa-cog"></i> Height 2</label>
+        <input id="node-input-height2" type="number" style="width: 70%">
+    </div>                
+    <div class="form-row tankType-property" id="node-coneHeight-div">
+        <label for="node-input-coneHeight"><i class="fa fa-cog"></i> Cone height</label>
+        <input id="node-input-coneHeight" type="number" style="width: 70%">
+    </div>    
+     <div class="form-row tankType-property" id="node-cylinderHeight-div">
+        <label for="node-input-cylinderHeight"><i class="fa fa-cog"></i> Cyl Height</label>
+        <input id="node-input-cylinderHeight" type="number" style="width: 70%">
+    </div>   
+    <div class="form-row tankType-property" id="node-diameterTop-div">
+        <label for="node-input-diameterTop"><i class="fa fa-cog"></i> Diam top</label>
+        <input id="node-input-diameterTop" type="number" style="width: 70%">
+    </div>       
+    <div class="form-row tankType-property" id="node-diameterBottom-div">
+        <label for="node-input-diameterBottom"><i class="fa fa-cog"></i> Diam bot</label>
+        <input id="node-input-diameterBottom" type="number" style="width: 70%">
+    </div>
+    </br>
+    <div class="form-row" style="width: 100%; text-align: center;">
+        <div style="display: inline-block;">
+            <img id="tank-image" src="" alt="Tank image" width="250" height="250">
+        </div>
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="tank-volume">
+    <p>A node to calculate a tank volume.</p>
+    <p>The calculations are based on this <a target="_blank" href="https://www.omnicalculator.com/construction/tank-volume">calculator</a> by Hanna Pamula.</p>
+    <p><strong>Input field:</strong><br/>
+    Specify the field in the input message message where the settings will arrive.</p>
+    <p><strong>Output field:</strong><br/>
+    Specify the field in the output message message where the result will be send.</p>
+    <p><strong>Measurement:</strong><br/>
+    Specify how the liquid level is being measured.</p>
+    <p><strong>Input unit:</strong><br/>
+    Specify the units of the tank dimensions.</p>
+    <p><strong>Output unit:</strong><br/>
+    Specify the units of the calculated volume.</p>    
+    <p><strong>Tank type:</strong><br/>
+    For every tank type, a series of parameters need to be specified. ALL these parameters need to be specified in the same unit (cm, inch, ...), as specified on the config screen!  Note that these parameters can be overwritten by the input message (like width, height, lenght, diameter, ...).</p>
+</script>
