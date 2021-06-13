@@ -43,7 +43,7 @@ Currently the following 13 tank types are supported:
 5. ***Horizontal cylinder***
 6. ***Horizontal elliptical***: typical use case is an oil tank below the ground.
 7. ***Horizontal oval***: typical use case is an oil tank above the ground.
-8. ***Inverse piramid***: my personal use case is a stormwater subsurface infiltration well, which has been extended after a few years later (by digging a second well below the original well).
+8. ***Inverse pyramid***: my personal use case is a stormwater subsurface infiltration well, which has been extended after a few years later (by digging a second well below the original well).
 9. ***Rectangular prism (rectangular)***
 10. ***Sphere***: storage of high pressure fluids, due to the even distribution of stress on the sphere surface (without weak points).
 11. ***Vertical capsule***: vertical cylinder with two hemisphere heads, for even distribution of pressure stress in the heads.
