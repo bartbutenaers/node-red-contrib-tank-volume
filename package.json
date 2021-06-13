@@ -1,0 +1,26 @@
+{
+    "name"         : "node-red-contrib-tank-volume",
+    "version"      : "1.0.0",
+    "description"  : "A Node-RED node to calculate the volume of different tank types",
+    "dependencies": {
+        "convert-units": "^2.3.4"
+    },
+    "author": {
+        "name": "Bart Butenaers"
+    },
+    "license": "Apache-2.0",
+    "keywords": [ "node-red", "tank", "vessel", "volume", "filled", "liquid", "partial", "level"],
+    "bugs": {
+        "url": "https://github.com/bartbutenaers/node-red-contrib-tank-volume/issues"
+    },
+    "homepage": "https://github.com/bartbutenaers/node-red-contrib-tank-volume",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/bartbutenaers/node-red-contrib-tank-volume.git"
+    },
+    "node-red"     : {
+        "nodes": {
+            "tank-volume": "tank_volume.js"
+        }
+    }
+}
