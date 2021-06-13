@@ -93,3 +93,7 @@ It is possible to configure this node by injecting settings via the input messag
    + *cone_height*
    + *cylinder_height*
    + *diameter_bottom*
+
+## References
+
++ [omnicalculator](https://www.omnicalculator.com/construction/tank-volume) by Hanna Pamula.
