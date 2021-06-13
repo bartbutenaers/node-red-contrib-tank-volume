@@ -146,7 +146,7 @@
             }
         }         
         
-        function getTotalVolumeInversePiramid(width, length, height, width2, length2, height2) {
+        function getTotalVolumeInversePyramid(width, length, height, width2, length2, height2) {
             if (width == undefined) throw "The width of the rectangular prism is undefined";
             if (length == undefined) throw "The length of the rectangular prism is undefined";
             if (height == undefined) throw "The height of the rectangular prismr is undefined";
@@ -157,7 +157,7 @@
             return getTotalVolumeRectangularPrism(width2, length2, height2) + getTotalVolumeRectangularPrism(width, length, height);
         }
         
-        function getPartialVolumeInversePiramid(width, length, height, width2, length2, height2, fluidHeight) {
+        function getPartialVolumeInversePyramid(width, length, height, width2, length2, height2, fluidHeight) {
             if (width == undefined) throw "The width of the rectangular prism is undefined";
             if (length == undefined) throw "The length of the rectangular prism is undefined";
             if (fluidHeight == undefined) throw "The fill level of the rectangular prism is undefined";
@@ -407,7 +407,7 @@
                 case "cone_bottom":
                     tankHeight = coneHeight + cylinderHeight;
                     break;
-                case "inv_piram":
+                case "inv_pyram":
                     tankHeight = height + height2;
                     break;
                 case "horiz_caps":
@@ -473,9 +473,9 @@
                         totalVolume = getTotalVolumeConeBottom(coneHeight, cylinderHeight, radiusTop, radiusBottom);
                         filledVolume = getPartialVolumeConeBottom(coneHeight, cylinderHeight, radiusTop, radiusBottom, fluidHeight);
                         break;
-                    case "inv_piram":
-                        totalVolume = getTotalVolumeInversePiramid(width, length, height, width2, length2, height2);
-                        filledVolume = getPartialVolumeInversePiramid(width, length, height, width2, length2, height2, fluidHeight);
+                    case "inv_pyram":
+                        totalVolume = getTotalVolumeInversePyramid(width, length, height, width2, length2, height2);
+                        filledVolume = getPartialVolumeInversePyramid(width, length, height, width2, length2, height2, fluidHeight);
                         break;                    
                     case "horiz_caps":
                         totalVolume = getTotalVolumeHorizontalCapsule(radius, length);
