@@ -23,8 +23,11 @@
         this.inputField        = config.inputField;
         this.measurement       = config.measurement;
         this.outputField       = config.outputField;  
-        this.inputUnit         = config.inputUnit;
-        this.outputUnit        = config.outputUnit;  
+        this.inputUnit1        = config.inputUnit1;
+        this.inputUnit2        = config.inputUnit2;
+        this.outputUnit        = config.outputUnit;
+        this.topLimit          = parseInt(config.topLimit);
+        this.bottomLimit       = parseInt(config.bottomLimit);
         this.tankType          = config.tankType;
         this.diameter          = parseFloat(config.diameter);
         this.length            = parseFloat(config.length);
@@ -37,6 +40,7 @@
         this.cylinderHeight    = parseFloat(config.cylinderHeight);
         this.diameterTop       = parseFloat(config.diameterTop);
         this.diameterBottom    = parseFloat(config.diameterBottom);
+        this.customTable       = config.customTable;
 
         var node = this;
         
@@ -146,7 +150,7 @@
             }
         }         
         
-        function getTotalVolumeInversePyramid(width, length, height, width2, length2, height2) {
+        function getTotalVolumeInversePiramid(width, length, height, width2, length2, height2) {
             if (width == undefined) throw "The width of the rectangular prism is undefined";
             if (length == undefined) throw "The length of the rectangular prism is undefined";
             if (height == undefined) throw "The height of the rectangular prismr is undefined";
@@ -157,7 +161,7 @@
             return getTotalVolumeRectangularPrism(width2, length2, height2) + getTotalVolumeRectangularPrism(width, length, height);
         }
         
-        function getPartialVolumeInversePyramid(width, length, height, width2, length2, height2, fluidHeight) {
+        function getPartialVolumeInversePiramid(width, length, height, width2, length2, height2, fluidHeight) {
             if (width == undefined) throw "The width of the rectangular prism is undefined";
             if (length == undefined) throw "The length of the rectangular prism is undefined";
             if (fluidHeight == undefined) throw "The fill level of the rectangular prism is undefined";
@@ -301,7 +305,25 @@
             var volumeHead = Math.pow(diameter, 3) * C * (Math.PI / 12) * ((3 * Math.pow(fluidHeight / diameter, 2)) - (2 * Math.pow(fluidHeight / diameter, 3)));
             
             return 2 * volumeHead +  + getPartialVolumeHorizonalCylinder(radius, length, fluidHeight);
-        }          
+        }
+        
+        function getTotalVolumeCustomTable(customTable) {
+            // The last volume in the row will be considered as the total volume ...
+            var lastRow = customTable[customTable.length-1];
+            return lastRow.volume;
+        }
+
+        function getPartialVolumeCustomTable(customTable, fluidHeight) {
+            for (var i = 1; i < customTable.length; i++) {
+                var previousRow = customTable[i-1];
+                var currentRow = customTable[i];
+                
+                if(fluidHeight >= previousRow.height && fluidHeight <= currentRow.height) {
+                    // Calculate the volume via linear interpolation (https://en.wikipedia.org/wiki/Linear_interpolation)
+                    return previousRow.volume + (fluidHeight - previousRow.height) * (currentRow.volume - previousRow.volume) / (currentRow.height - previousRow.height)
+                }
+            }
+        }
         
         node.on("input", function(msg) {
             var input;
@@ -309,8 +331,12 @@
             var tankHeight = 0;
             var totalVolume = 0;
             var filledVolume = 0;
+            var minimumVolume = 0;
+            var maximumVolume = 0;
 
-            // Copy the tank dimensions
+            // Copy the tank dimensions and limits
+            var topLimit        = node.topLimit;
+            var bottomLimit     = node.bottomLimit;
             var diameter        = node.diameter;
             var length          = node.length;
             var width           = node.width;
@@ -322,6 +348,7 @@
             var cylinderHeight  = node.cylinderHeight;
             var diameterTop     = node.diameterTop;
             var diameterBottom  = node.diameterBottom;
+            var customTable     = node.customTable;
             
             try {
                 input = RED.util.getMessageProperty(msg, node.inputField);
@@ -345,7 +372,13 @@
                 cylinderHeight  = cylinderHeight  || input.cylinder_height;
                 diameterTop     = diameterTop     || input.diameter_top;
                 diameterBottom  = diameterBottom  || input.diameter_bottom;
+                
+                // The measured height always arrives via the input message, never via the config screen
                 measuredHeight  = input.measuredHeight;
+                
+                if (customTable.length === 0) {
+                    customTable = input.customTable;
+                }
             }
             else if (!isNaN(input)) {
                 // The input can be a single number, representing the measured height
@@ -356,26 +389,72 @@
                 return;
             }
             
+            if (node.tankType === "custom_table") {
+                if (!customTable || !Array.isArray(customTable) || customTable.length === 0) {
+                    node.error("The custom table should contain at least one row");
+                    return;                    
+                }
+                
+                if (customTable.length === 1 && customTable[0].height == 0) {
+                    node.error("When the custom table contains one row, then height 0 is not allowed");
+                    return;                    
+                }
+                
+                // TODO check whether each array element has a height and a volume property
+                
+                // Sort the custom table by ascending height
+                customTable.sort(function(row1, row2) {
+                    return parseFloat(row1.height) - parseFloat(row2.height);
+                });
+                
+                if (customTable[0].height == 0) {
+                    if (customTable[0].volume != 0) {
+                        node.error("The volume of height 0 should also be 0 in the custom table");
+                        return;
+                    }                        
+                }
+                else {
+                    // The table should start with height 0
+                    customTable.unshift({height:0, volume:0});
+                }
+            }
+            
             // From here on we work with radius (instead of diameter), to simplify the formula's...
             var radius = diameter / 2;
             var radiusTop = diameterTop / 2;
             var radiusBottom = diameterBottom / 2;
             
-            // When input dimensions are specified in another dimension, convert them to centimeter
-            if (node.inputUnit !== "cm") {
-                diameter        = diameter1 = convert(diameter1).from(node.inputUnit).to('cm');
-                length          = convert(length).from(node.inputUnit).to('cm');
-                width           = convert(width).from(node.inputUnit).to('cm');
-                height          = convert(height).from(node.inputUnit).to('cm');
-                length2         = convert(length2).from(node.inputUnit).to('cm');
-                width2          = convert(width2).from(node.inputUnit).to('cm');
-                height2         = convert(height2).from(node.inputUnit).to('cm');
-                coneHeight      = convert(coneHeight).from(node.inputUnit).to('cm');
-                cylinderHeight  = convert(cylinderHeight).from(node.inputUnit).to('cm');
-                diameterTop     = convert(diameterTop).from(node.inputUnit).to('cm');
-                diameterBottom  = convert(diameterBottom).from(node.inputUnit).to('cm');
-                measuredHeight  = convert(diameter1).from(node.inputUnit).to('cm');
+            // When input dimensions (2D) and limits are specified in another dimension, convert them to centimeter
+            if (node.inputUnit1 !== "cm") {
+                topLimit        = convert(topLimit).from(node.inputUnit1).to('cm');
+                bottomLimit     = convert(bottomLimit).from(node.inputUnit1).to('cm');
+                diameter        = convert(diameter).from(node.inputUnit1).to('cm');
+                length          = convert(length).from(node.inputUnit1).to('cm');
+                width           = convert(width).from(node.inputUnit1).to('cm');
+                height          = convert(height).from(node.inputUnit1).to('cm');
+                length2         = convert(length2).from(node.inputUnit1).to('cm');
+                width2          = convert(width2).from(node.inputUnit1).to('cm');
+                height2         = convert(height2).from(node.inputUnit1).to('cm');
+                coneHeight      = convert(coneHeight).from(node.inputUnit1).to('cm');
+                cylinderHeight  = convert(cylinderHeight).from(node.inputUnit1).to('cm');
+                diameterTop     = convert(diameterTop).from(node.inputUnit1).to('cm');
+                diameterBottom  = convert(diameterBottom).from(node.inputUnit1).to('cm');
+                measuredHeight  = convert(measuredHeight).from(node.inputUnit1).to('cm');
+                
+                // Convert the unit of every height in the custom table
+                customTable.forEach(function(row, index, array) {
+                    row.height = convert(row.height).from(node.inputUnit1).to('cm');
+                });
             }   
+
+            // When input dimensions (3D) are specified in another dimension, convert them to cm3.
+            // Currently this is only used for the volumes in the custom table...
+            if (node.inputUnit2 !== "cm3") {
+                // Convert the unit of every volume in the custom table
+                customTable.forEach(function(row, index, array) {
+                    row.volume = convert(row.volume).from(node.inputUnit2).to('cm3');
+                });
+            }
 
             var tankType = node.tankType;
             
@@ -407,7 +486,7 @@
                 case "cone_bottom":
                     tankHeight = coneHeight + cylinderHeight;
                     break;
-                case "inv_pyram":
+                case "inv_piram":
                     tankHeight = height + height2;
                     break;
                 case "horiz_caps":
@@ -429,12 +508,30 @@
                 case "horiz_ellip":
                     tankHeight = 2 * radius;
                     break;
+                case "custom_table":
+                    tankHeight = customTable[customTable.length-1].height;
+                    break;
                 default:
                     throw "Unsupported tank type";
             }
             
             if (measuredHeight > tankHeight) { 
                 node.warn("The measured depth (" + measuredHeight + ") is larger than the tank height (" + tankHeight + ")");
+                return;
+            }
+            
+            if (bottomLimit > tankHeight) { 
+                node.warn("The bottom limit (" + bottomLimit + ") is larger than the tank height (" + tankHeight + ")");
+                return;
+            }
+            
+            if (topLimit > tankHeight) { 
+                node.warn("The top limit (" + topLimit + ") is larger than the tank height (" + tankHeight + ")");
+                return;
+            }
+            
+            if ((bottomLimit + topLimit) > tankHeight) { 
+                node.warn("The sum of bottom and top limit (" + (bottomLimit + topLimit) + ") is larger than the tank height (" + tankHeight + ")");
                 return;
             }
 
@@ -456,51 +553,81 @@
                     case "horiz_cylin":
                         totalVolume = getTotalVolumeHorizonalCylinder(radius, length);
                         filledVolume = getPartialVolumeHorizonalCylinder(radius, length, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeHorizonalCylinder(radius, length, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeHorizonalCylinder(radius, length, tankHeight - topLimit);
                         break;
                     case "vert_cylin":
                         totalVolume = getTotalVolumeVerticalCylinder(radius, height);
                         filledVolume = getPartialVolumeVerticalCylinder(radius, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeVerticalCylinder(radius, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeVerticalCylinder(radius, tankHeight - topLimit);
                         break;
                     case "rect_prism":
                         totalVolume = getTotalVolumeRectangularPrism(width, length, height);
                         filledVolume = getPartialVolumeRectangularPrism(width, length, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeRectangularPrism(width, length, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeRectangularPrism(width, length, tankHeight - topLimit);
                         break;
                     case "cone_top":
                         totalVolume = getTotalVolumeConeTop(coneHeight, cylinderHeight, radiusTop, radiusBottom);
                         filledVolume = getPartialVolumeConeTop(coneHeight, cylinderHeight, radiusTop, radiusBottom, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeConeTop(coneHeight, cylinderHeight, radiusTop, radiusBottom, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeConeTop(coneHeight, cylinderHeight, radiusTop, radiusBottom, tankHeight - topLimit);
                         break;
                     case "cone_bottom":
                         totalVolume = getTotalVolumeConeBottom(coneHeight, cylinderHeight, radiusTop, radiusBottom);
                         filledVolume = getPartialVolumeConeBottom(coneHeight, cylinderHeight, radiusTop, radiusBottom, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeConeBottom(coneHeight, cylinderHeight, radiusTop, radiusBottom, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeConeBottom(coneHeight, cylinderHeight, radiusTop, radiusBottom, tankHeight - topLimit);
                         break;
-                    case "inv_pyram":
-                        totalVolume = getTotalVolumeInversePyramid(width, length, height, width2, length2, height2);
-                        filledVolume = getPartialVolumeInversePyramid(width, length, height, width2, length2, height2, fluidHeight);
+                    case "inv_piram":
+                        totalVolume = getTotalVolumeInversePiramid(width, length, height, width2, length2, height2);
+                        filledVolume = getPartialVolumeInversePiramid(width, length, height, width2, length2, height2, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeInversePiramid(width, length, height, width2, length2, height2, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeInversePiramid(width, length, height, width2, length2, height2, tankHeight - topLimit);
                         break;                    
                     case "horiz_caps":
                         totalVolume = getTotalVolumeHorizontalCapsule(radius, length);
                         filledVolume = getPartialVolumeHorizontalCapsule(radius, length, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeHorizontalCapsule(radius, length, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeHorizontalCapsule(radius, length, tankHeight - topLimit);
                         break;
                     case "vert_caps":
                         totalVolume = getTotalVolumeVerticalCapsule(radius, length);
                         filledVolume = getPartialVolumeVerticalCapsule(radius, length, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeVerticalCapsule(radius, length, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeVerticalCapsule(radius, length, tankHeight - topLimit);
                         break;
                     case "horiz_oval":
                     case "vert_oval":
                         totalVolume = getTotalVolumeOval(width, length, height);
                         filledVolume = getPartialVolumeOval(width, length, height, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeOval(width, length, height, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeOval(width, length, height, tankHeight - topLimit);
                         break;
                     case "frustrum":
                         totalVolume = getTotalVolumeFrustrum(height, radiusTop, radiusBottom);
                         filledVolume = getPartialVolumeFrustrum(height, radiusTop, radiusBottom, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeFrustrum(height, radiusTop, radiusBottom, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeFrustrum(height, radiusTop, radiusBottom, tankHeight - topLimit);
                         break;
                     case "sphere":
                         totalVolume = getTotalVolumeSphere(radius);
                         filledVolume = getPartialVolumeSphere(radius, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeSphere(radius, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeSphere(radius, tankHeight - topLimit);
                         break;
                     case "horiz_ellip":    
                         totalVolume = getTotalVolumeHorizontalElliptical(radius, length);
                         filledVolume = getPartialVolumeHorizontalElliptical(radius, length, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeHorizontalElliptical(radius, length, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeHorizontalElliptical(radius, length, tankHeight - topLimit);
+                        break;
+                    case "custom_table":    
+                        totalVolume = getTotalVolumeCustomTable(customTable);
+                        filledVolume = getPartialVolumeCustomTable(customTable, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeCustomTable(customTable, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeCustomTable(customTable, tankHeight - topLimit);
                         break;
                     default:
                         throw "Unsupported tank type";
@@ -514,29 +641,63 @@
             // Calculate the empty volume above the fluid
             var emptyVolume = (totalVolume - filledVolume);
             
+            // Calculate the usable volume, between the minimum and maximum tank limits
+            var usableVolume = maximumVolume - minimumVolume;
+            
+            // Calculate the usable filled volume, which needs to be between minimumVolume and maximumVolume
+            var usableFilledVolume = Math.max(0, Math.min(maximumVolume, filledVolume) - minimumVolume);
+            
+            // Calculate the usable empty volume, which is the remaining part in the usableVolume
+            var usableEmptyVolume = usableVolume - usableFilledVolume;
+            
             // Calculate how many percentage of the tank is filled
             var fillPercentage = 100 * filledVolume / totalVolume;
             
             // Calculate how many percentage of the tank is empty
             var emptyPercentage = 100 - fillPercentage;
             
+            // Calculate how many percentage of the usable tank is filled
+            var usableFillPercentage = 100 * usableFilledVolume / usableVolume;
+            
+            // Calculate how many percentage of the usable tank is empty
+            var usableEmptyPercentage = 100 - usableFillPercentage;
+            
             // Since all input values have been converted to cm, the calulated volumes will be cm3.
             // If another volume unit is required, then convert the volumes to the specified format.
             if (node.outputUnit !== "cm3") {
-                totalVolume  = convert(totalVolume).from("cm3").to(node.outputUnit);
-                filledVolume = convert(filledVolume).from("cm3").to(node.outputUnit);
-                emptyVolume  = convert(emptyVolume).from("cm3").to(node.outputUnit);
+                totalVolume        = convert(totalVolume).from("cm3").to(node.outputUnit);
+                filledVolume       = convert(filledVolume).from("cm3").to(node.outputUnit);
+                emptyVolume        = convert(emptyVolume).from("cm3").to(node.outputUnit);
+                usableVolume       = convert(usableVolume).from("cm3").to(node.outputUnit);
+                usableFilledVolume = convert(usableFilledVolume).from("cm3").to(node.outputUnit);
+                usableEmptyVolume  = convert(usableEmptyVolume).from("cm3").to(node.outputUnit);
             }   
 
             // Make sure all output numbers are rounded (i.e. no decimals)
-            totalVolume     = Math.round(totalVolume);
-            filledVolume    = Math.round(filledVolume);
-            emptyVolume     = Math.round(emptyVolume);
-            fillPercentage  = Math.round(fillPercentage);
-            emptyPercentage = Math.round(emptyPercentage);
-
+            totalVolume           = Math.round(totalVolume);
+            filledVolume          = Math.round(filledVolume);
+            emptyVolume           = Math.round(emptyVolume);
+            usableVolume          = Math.round(usableVolume);
+            usableFilledVolume    = Math.round(usableFilledVolume);
+            usableEmptyVolume     = Math.round(usableEmptyVolume);
+            fillPercentage        = Math.round(fillPercentage);
+            emptyPercentage       = Math.round(emptyPercentage);
+            usableFillPercentage  = Math.round(usableFillPercentage);
+            usableEmptyPercentage = Math.round(usableEmptyPercentage);
+            
             try {
-                var result = {totalVolume: totalVolume, filledVolume: filledVolume, emptyVolume: emptyVolume, fillPercentage: fillPercentage, emptyPercentage: emptyPercentage};
+                var result = {
+                    totalVolume: totalVolume,
+                    filledVolume: filledVolume,
+                    emptyVolume: emptyVolume,
+                    usableVolume: usableVolume,
+                    usableFilledVolume: usableFilledVolume,
+                    usableEmptyVolume: usableEmptyVolume,
+                    fillPercentage: fillPercentage,
+                    emptyPercentage: emptyPercentage,
+                    usableFillPercentage: usableFillPercentage,
+                    usableEmptyPercentage: usableEmptyPercentage
+                };
                 RED.util.setMessageProperty(msg, node.outputField, result);
             } 
             catch(err) {

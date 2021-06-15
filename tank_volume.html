@@ -20,14 +20,40 @@
         {v:"cone_bottom" , t:"Cone bottom"},
         {v:"horiz_caps"  , t:"Horizontal capsule"},
         {v:"vert_caps"   , t:"Vertical capsule"},
-        {v:"inv_pyram"   , t:"Inverse pyramid"},
+        {v:"inv_piram"   , t:"Inverse piramid"},
         {v:"horiz_oval"  , t:"Horizontal oval (elliptical)"},
         {v:"vert_oval"   , t:"Vertical oval (elliptical)"},
         {v:"frustrum"    , t:"Frustum (truncated cone)"},
         {v:"sphere"      , t:"Sphere"},
-        {v:"horiz_ellip" , t:"Horizontal elliptical"}
-        
+        {v:"horiz_ellip" , t:"Horizontal elliptical"},
+        {v:"custom_table", t:"Custom (table)"}
     ];
+    
+    // The resizeDialog code is based on the Node-RED 20-inject.html file
+    function resizeDialog(size) {
+        // Get the total height available in the popup dialog (for this node's config screen)
+        size = size || { height: $(".red-ui-tray-content form").height() }
+        
+        // Get the already used heigh, i.e. the height of all the first level DIV elements (i.e. not the nested DIV elements).
+        // This is the space used by the top level form-row DIV elements, e.g. to show the "Name" input field.
+        // Note that the current tabsheet content (i.e. #node-energy-tabs-content) space is ignored, since that is the one we need to calculate.
+        var rows = $("#dialog-form>div:not(#node-tank-tabs-content):visible");
+        var height = size.height;
+        for (var i=0; i<rows.length; i++) {
+            height -= $(rows[i]).outerHeight(true);
+        }
+        var editorRow = $("#dialog-form>div#node-tank-tabs-content");
+        height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
+        
+        // Set the current visible editableList container height to the available height.
+        // The catch will be triggered when the dialog is opened: every addTab function (in the oneditprepare) will trigger it, 
+        // but at that moment the editableList elements are not initialized yet (resulting in an exception).
+        // That is however not a problem, since immediately afterwards the oneditresize function will trigger this code again...
+        try {
+            $(".auto-height-container:visible").editableList('height',height);
+        }
+        catch(err) {}
+    }
 
     RED.nodes.registerType('tank-volume',{
         category: 'smart home',
@@ -38,8 +64,11 @@
             inputField: {value:"payload"},
             outputField: {value:"payload"},
             measurement: {value:"above"},
-            inputUnit: {value:"cm"},
+            inputUnit1: {value:"cm"},
+            inputUnit2: {value:"l"},
             outputUnit: {value:"l"},
+            topLimit: {value:0},
+            bottomLimit: {value:0},
             diameter: {value: 0},
             length: {value: 0},
             width: {value: 0},
@@ -50,7 +79,8 @@
             coneHeight: {value: 0},
             cylinderHeight: {value: 0},
             diameterTop: {value: 0},
-            diameterBottom: {value: 0}
+            diameterBottom: {value: 0},
+            customTable: {value: []}
         },        
         inputs:1,
         outputs:1,
@@ -69,6 +99,8 @@
             return this.name || tankTypeText || "Tank volume";
         },    
         oneditprepare: function() {
+            var node = this;
+            
             // Show the inputField value in a typedinput element (dropdown with only 'msg')
             $("#node-input-inputField").typedInput({
                 default: 'msg',
@@ -95,7 +127,7 @@
             
             // When the tank type value changes, only the corresponding field(s) input fields should be displayed
             $("#node-input-tankType").change(function() {
-                if (this.value && this.value !== "" && this.value !== "none") {
+                if (this.value && this.value !== "" && this.value !== "none" && this.value !== "custom_table") {
                     // Show the image of the selected tank
                     imageElement.attr("src", 'tank-volume/' + this.value + '.png');
                     imageElement.show();
@@ -135,7 +167,7 @@
                         $("#node-diameterTop-div").show();
                         $("#node-diameterBottom-div").show();
                         break;
-                    case "inv_pyram":
+                    case "inv_piram":
                         $("#node-width-div").show();
                         $("#node-length-div").show();
                         $("#node-height-div").show();
@@ -168,13 +200,95 @@
                     case "horiz_ellip":
                         $("#node-diameter-div").show();                    
                         $("#node-length-div").show();
-                    break;
+                        break;
+                    case "custom_table":
+                        $("#node-table-div").show();
+                        break;
+                }
+                
+                // The "Custom tank" tabsheet should be enabled only when custom tank option is selected.
+                // Note that enabling/disabling tabsheets is not supported by Node-RED (see https://discourse.nodered.org/t/disable-a-tabsheet-in-config-screen/32031)
+                if (this.value === "custom_table") {
+                    $("#red-ui-tab-node-tank-tab-custom").css('pointer-events', "");
+                    $("#red-ui-tab-node-tank-tab-custom").css('opacity', "");
+                }
+                else {
+                    $("#red-ui-tab-node-tank-tab-custom").css('pointer-events', "none");
+                    $("#red-ui-tab-node-tank-tab-custom").css('opacity', "0.4");
                 }
             });
             $("#node-input-tankType").change();
+            
+            // Show tabsheets
+            node.tabs = RED.tabs.create({
+                id: "node-tank-tabs",
+                onchange: function(tab) {
+                    // Show only the content (i.e. the children) of the selected tabsheet, and hide the others
+                    $("#node-tank-tabs-content").children().hide();
+                    $("#" + tab.id).show();
+                    
+                    // Make sure that the editableList on this tab will fill the entire available area
+                    resizeDialog();
+                }
+            });
+            node.tabs.addTab({
+                id: "node-tank-tab-general",
+                label: "General"
+            });
+            node.tabs.addTab({
+                id: "node-tank-tab-tank",
+                label: "Tank"
+            });
+            node.tabs.addTab({
+                id: "node-tank-tab-custom",
+                label: "Custom tank"
+            });
+            
+            var customTableList = $("#node-input-custom-container").css('min-height','200px').editableList({
+                // Apply css to the parent div to have margins, to make sure the percentages of the headers match those of the html elements below.
+                // Thanks to hotNipi for this tip !!!
+                header: $("<div>").css({"margin-left":"28px","margin-right":"10x"}).append($.parseHTML(
+                   "<div style='width:40%; display: inline-grid'><b>Height</b></div>" +
+                   "<div style='width:40%; display: inline-grid'><b>Volume</b></div>")),
+                addItem: function(container, i, customTableRow) {
+                    // Add a new row to the editableList
+                    var row = $('<div/>').appendTo(container);
+                    
+                    // Column 1 : Add an input field (type number) to the new row, that represents the height
+                    var heightField = $('<input/>',{class:"node-input-custom-height",type:"number"}).css({"width":"40%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    heightField.val(customTableRow.height || 0);                   
+
+                    // Column 2 : Add an input field (type number) to the new row, that represents the volume (corresponding to that height)
+                    var volumeField = $('<input/>',{class:"node-input-custom-volume",type:"number"}).css({"width":"40%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    volumeField.val(customTableRow.volume || 0);
+                },
+                removable: true,
+                sortable: true
+            });
+            
+            // Show all the options (stored in this node) into the editableList
+            if (node.customTable) {
+                node.customTable.forEach(function (customTableRow, index) {
+                    customTableList.editableList('addItem', {height:customTableRow.height, volume:customTableRow.volume});
+                });
+            }
         },
         oneditsave: function() {
+            var node = this;
 
+            // Copy all the options from the editableList to this node
+            node.customTable = [];
+            var customTableList = $("#node-input-custom-container").editableList('items');
+            customTableList.each(function(i) {
+                var option    = $(this);
+                var height    = option.find(".node-input-custom-height").val();
+                var volume    = option.find(".node-input-custom-volume").val();
+                
+                node.customTable.push({height:height, volume:volume});
+            });
+        },
+        oneditresize: function(size) {
+            resizeDialog(size);
         }
     });
 </script>
@@ -184,92 +298,130 @@
         <label for="node-input-name"><i class="icon-tag"></i> Name</label>
         <input type="text" id="node-input-name" placeholder="Name">
     </div>
-    <div class="form-row">
-        <label for="node-input-inputField"><i class="fa fa-sign-in"></i> Input field</label>
-        <input id="node-input-inputField" type="text" style="width: 70%">
-    </div>  
-    <div class="form-row">
-        <label for="node-input-outputField"><i class="fa fa-sign-out"></i> Output field</label>
-        <input id="node-input-outputField" type="text" style="width: 70%">
-    </div>   
-    <div class="form-row">
-        <label for="node-input-measurement"><i class="fa fa-download"></i> Measure</label>
-        <select id="node-input-measurement">
-            <option value="fluid">Height of fluid</option>
-            <option value="above">Height above fluid</option>
-        </select>
-    </div>
-    <div class="form-row">
-        <label for="node-input-inputUnit"><i class="fa fa-sign-in"></i> Input unit</label>
-        <select id="node-input-inputUnit">
-            <option value="cm">Centimeters</option>
-            <option value="in">Inches</option>
-        </select>
-    </div>
-    <div class="form-row">
-        <label for="node-input-outputUnit"><i class="fa fa-sign-out"></i> Output unit</label>
-        <select id="node-input-outputUnit">
-            <option value="cm3">Cubic centimeters</option>
-            <option value="l">Litres</option>
-            <option value="in3">Cubic inches</option>
-            <option value="gal">Gallons (US)</option>
-        </select>
-    </div>
     </br>
     <div class="form-row">
-        <label for="node-input-tankType"><i class="fa fa-battery-full"></i> Tank type</label>
-        <select id="node-input-tankType">
-            <!-- The options will be added programmatically -->
-        </select>
+        <!-- Tabsheets -->
+        <ul style="background: #fff; margin-bottom: 20px;" id="node-tank-tabs"></ul>
     </div>
-    <div class="form-row tankType-property" id="node-diameter-div">
-        <label for="node-input-diameter"><i class="fa fa-cog"></i> Diameter</label>
-        <input id="node-input-diameter" type="number" style="width: 70%">
-    </div>       
-    <div class="form-row tankType-property" id="node-length-div">
-        <label for="node-input-length"><i class="fa fa-cog"></i> Length</label>
-        <input id="node-input-length" type="number" style="width: 70%">
-    </div>     
-    <div class="form-row tankType-property" id="node-width-div">
-        <label for="node-input-width"><i class="fa fa-cog"></i> Width</label>
-        <input id="node-input-width" type="number" style="width: 70%">
-    </div>             
-    <div class="form-row tankType-property" id="node-height-div">
-        <label for="node-input-height"><i class="fa fa-cog"></i> Height</label>
-        <input id="node-input-height" type="number" style="width: 70%">
-    </div>          
-    <div class="form-row tankType-property" id="node-length2-div">
-        <label for="node-input-length2"><i class="fa fa-cog"></i> Length 2</label>
-        <input id="node-input-length2" type="number" style="width: 70%">
-    </div>     
-    <div class="form-row tankType-property" id="node-width2-div">
-        <label for="node-input-width2"><i class="fa fa-cog"></i> Width 2</label>
-        <input id="node-input-width2" type="number" style="width: 70%">
-    </div>             
-    <div class="form-row tankType-property" id="node-height2-div">
-        <label for="node-input-height2"><i class="fa fa-cog"></i> Height 2</label>
-        <input id="node-input-height2" type="number" style="width: 70%">
-    </div>                
-    <div class="form-row tankType-property" id="node-coneHeight-div">
-        <label for="node-input-coneHeight"><i class="fa fa-cog"></i> Cone height</label>
-        <input id="node-input-coneHeight" type="number" style="width: 70%">
-    </div>    
-     <div class="form-row tankType-property" id="node-cylinderHeight-div">
-        <label for="node-input-cylinderHeight"><i class="fa fa-cog"></i> Cyl Height</label>
-        <input id="node-input-cylinderHeight" type="number" style="width: 70%">
-    </div>   
-    <div class="form-row tankType-property" id="node-diameterTop-div">
-        <label for="node-input-diameterTop"><i class="fa fa-cog"></i> Diam top</label>
-        <input id="node-input-diameterTop" type="number" style="width: 70%">
-    </div>       
-    <div class="form-row tankType-property" id="node-diameterBottom-div">
-        <label for="node-input-diameterBottom"><i class="fa fa-cog"></i> Diam bot</label>
-        <input id="node-input-diameterBottom" type="number" style="width: 70%">
-    </div>
-    </br>
-    <div class="form-row" style="width: 100%; text-align: center;">
-        <div style="display: inline-block;">
-            <img id="tank-image" src="" alt="Tank image" width="250" height="250">
+    <div id="node-tank-tabs-content" style="min-height: 150px">
+        <!-- Content of all tabsheets -->
+        <div id="node-tank-tab-general" class="node-tank-tab-content">
+            <div class="form-row">
+                <label for="node-input-inputField"><i class="fa fa-sign-in"></i> Input field</label>
+                <input id="node-input-inputField" type="text" style="width: 70%">
+            </div>  
+            <div class="form-row">
+                <label for="node-input-outputField"><i class="fa fa-sign-out"></i> Output field</label>
+                <input id="node-input-outputField" type="text" style="width: 70%">
+            </div>   
+            <div class="form-row">
+                <label for="node-input-measurement"><i class="fa fa-download"></i> Measure</label>
+                <select id="node-input-measurement" style="width: 70%">
+                    <option value="fluid">Height of fluid</option>
+                    <option value="above">Height above fluid</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="node-input-inputUnit1"><i class="fa fa-sign-in"></i> Input unit 1</label>
+                <select id="node-input-inputUnit1" style="width: 70%">
+                    <option value="cm">Centimeters</option>
+                    <option value="in">Inches</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="node-input-inputUnit2"><i class="fa fa-sign-in"></i> Input unit 2</label>
+                <select id="node-input-inputUnit2" style="width: 70%">
+                    <option value="cm3">Cubic centimeters</option>
+                    <option value="l">Litres</option>
+                    <option value="in3">Cubic inches</option>
+                    <option value="gal">Gallons (US)</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="node-input-outputUnit"><i class="fa fa-sign-out"></i> Output unit</label>
+                <select id="node-input-outputUnit" style="width: 70%">
+                    <option value="cm3">Cubic centimeters</option>
+                    <option value="l">Litres</option>
+                    <option value="in3">Cubic inches</option>
+                    <option value="gal">Gallons (US)</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="node-input-topLimit"><i class="fa fa-level-down"></i> Top limit</label>
+                <input id="node-input-topLimit" type="number" style="width: 70%">
+            </div>
+             <div class="form-row">
+                <label for="node-input-bottomLimit"><i class="fa fa-level-up"></i> Bottom limit</label>
+                <input id="node-input-bottomLimit" type="number" style="width: 70%">
+            </div>
+        </div>
+        <div id="node-tank-tab-tank" class="node-tank-tab-content">
+            <div class="form-row">
+                <label for="node-input-tankType"><i class="fa fa-battery-full"></i> Tank type</label>
+                <select id="node-input-tankType" style="width: 70%">
+                    <!-- The options will be added programmatically -->
+                </select>
+            </div>
+            <div class="form-row tankType-property" id="node-diameter-div">
+                <label for="node-input-diameter"><i class="fa fa-cog"></i> Diameter</label>
+                <input id="node-input-diameter" type="number" style="width: 70%">
+            </div>       
+            <div class="form-row tankType-property" id="node-length-div">
+                <label for="node-input-length"><i class="fa fa-cog"></i> Length</label>
+                <input id="node-input-length" type="number" style="width: 70%">
+            </div>     
+            <div class="form-row tankType-property" id="node-width-div">
+                <label for="node-input-width"><i class="fa fa-cog"></i> Width</label>
+                <input id="node-input-width" type="number" style="width: 70%">
+            </div>             
+            <div class="form-row tankType-property" id="node-height-div">
+                <label for="node-input-height"><i class="fa fa-cog"></i> Height</label>
+                <input id="node-input-height" type="number" style="width: 70%">
+            </div>          
+            <div class="form-row tankType-property" id="node-length2-div">
+                <label for="node-input-length2"><i class="fa fa-cog"></i> Length 2</label>
+                <input id="node-input-length2" type="number" style="width: 70%">
+            </div>     
+            <div class="form-row tankType-property" id="node-width2-div">
+                <label for="node-input-width2"><i class="fa fa-cog"></i> Width 2</label>
+                <input id="node-input-width2" type="number" style="width: 70%">
+            </div>             
+            <div class="form-row tankType-property" id="node-height2-div">
+                <label for="node-input-height2"><i class="fa fa-cog"></i> Height 2</label>
+                <input id="node-input-height2" type="number" style="width: 70%">
+            </div>                
+            <div class="form-row tankType-property" id="node-coneHeight-div">
+                <label for="node-input-coneHeight"><i class="fa fa-cog"></i> Cone height</label>
+                <input id="node-input-coneHeight" type="number" style="width: 70%">
+            </div>    
+             <div class="form-row tankType-property" id="node-cylinderHeight-div">
+                <label for="node-input-cylinderHeight"><i class="fa fa-cog"></i> Cyl Height</label>
+                <input id="node-input-cylinderHeight" type="number" style="width: 70%">
+            </div>   
+            <div class="form-row tankType-property" id="node-diameterTop-div">
+                <label for="node-input-diameterTop"><i class="fa fa-cog"></i> Diam top</label>
+                <input id="node-input-diameterTop" type="number" style="width: 70%">
+            </div>       
+            <div class="form-row tankType-property" id="node-diameterBottom-div">
+                <label for="node-input-diameterBottom"><i class="fa fa-cog"></i> Diam bot</label>
+                <input id="node-input-diameterBottom" type="number" style="width: 70%">
+            </div>
+            <div class="form-row tankType-property" id="node-table-div">
+                <label for="node-input-tableLabel"><i class="fa fa-table"></i> Table</label>
+                <label id="node-input-tableLabel" style="width: 70%"> Configure the table in the "Custom tank" tabsheet</label>
+            </div>
+            </br>
+            <div class="form-row" style="width: 100%; text-align: center;">
+                <div style="display: inline-block;">
+                    <img id="tank-image" src="" alt="Tank image" width="250" height="250">
+                </div>
+            </div>
+        </div>
+        <div id="node-tank-tab-custom" class="node-tank-tab-content">
+            <div class="form-row">
+                <!-- Table with custom height/volume pairs -->
+                <ol id="node-input-custom-container" class="auto-height-container"></ol>
+            </div>        
         </div>
     </div>
 </script>
@@ -282,10 +434,16 @@
     Specify the field in the output message message where the result will be send.</p>
     <p><strong>Measurement:</strong><br/>
     Specify how the liquid level is being measured.</p>
-    <p><strong>Input unit:</strong><br/>
+    <p><strong>Input unit 1:</strong><br/>
     Specify the units of the tank dimensions.</p>
+    <p><strong>Input unit 2:</strong><br/>
+    Specify the units of the custom tank volumes (see tabsheet "Custom tank").</p>
     <p><strong>Output unit:</strong><br/>
-    Specify the units of the calculated volume.</p>    
+    Specify the units of the calculated volume.</p>
+    <p><strong>Top limit:</strong><br/>
+    Specify which distance - from the top of the tank - should not be exceeded, i.e. the fluid level should always be below this level.</p>
+    <p><strong>Bottom limit:</strong><br/>
+    Specify which distance - from the bottom of the tank - should not be exceeded, i.e. the fluid level should always be above this level.</p>  
     <p><strong>Tank type:</strong><br/>
     For every tank type, a series of parameters need to be specified. ALL these parameters need to be specified in the same unit (cm, inch, ...), as specified on the config screen!  Note that these parameters can be overwritten by the input message (like width, height, lenght, diameter, ...).</p>
 </script>
