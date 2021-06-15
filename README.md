@@ -129,6 +129,8 @@ Some guidelines for configuring this table:
 + It doesn't matter if the heights are sorted, because that will be done automatically during the calculation.  But of course it will be easier to understand if you sort them already on your screen (starting with the smallest height at the bottom like in the screenshot above).
 + The largest specified height will be considered as the total height of the tank.
 + It is not needed to specify a row with `height=0` and `volume=0` (to represent the bottom of the tank), because such a row will automatically be added during the calculation anyway.
++ The height unit can be specified in the first tabsheet as *"Input unit 1"* (because that is the unit for all input length dimensions).
++ The volume unit can be specified in the first tabsheet as *"Input unit 2"* (because that is the unit for all input volume dimensions).
 
 Remark: the caculation will use *linear interpolation* to estimate the volume between two successive heights.
 
