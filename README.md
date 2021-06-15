@@ -132,6 +132,13 @@ Some guidelines for configuring this table:
 + The height unit can be specified in the first tabsheet as *"Input unit 1"* (because that is the unit for all input length dimensions).
 + The volume unit can be specified in the first tabsheet as *"Input unit 2"* (because that is the unit for all input volume dimensions).
 
+A custom tank table example flow:
+
+![Custom tank example](https://user-images.githubusercontent.com/14224149/122122451-1bc9eb00-ce2d-11eb-8ae2-d963325033a5.png)
+```
+[{"id":"036fd0e4db56224d","type":"tank-volume","z":"f3483c9d.032fa","name":"","tankType":"custom_table","inputField":"payload","outputField":"payload","measurement":"above","inputUnit1":"cm","inputUnit2":"l","outputUnit":"l","topLimit":"80","bottomLimit":"20","diameter":0,"length":0,"width":0,"height":0,"length2":0,"width2":0,"height2":0,"coneHeight":0,"cylinderHeight":0,"diameterTop":0,"diameterBottom":0,"customTable":[{"height":"100","volume":"500"},{"height":"80","volume":"400"},{"height":"60","volume":"300"},{"height":"40","volume":"200"},{"height":"20","volume":"100"}],"x":960,"y":780,"wires":[["8806beda52b0580c"]]},{"id":"75d01bddcd870705","type":"inject","z":"f3483c9d.032fa","name":"Measured height 50","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"measuredHeight\":50}","payloadType":"json","x":730,"y":780,"wires":[["036fd0e4db56224d"]]},{"id":"8806beda52b0580c","type":"debug","z":"f3483c9d.032fa","name":"","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":1140,"y":780,"wires":[]}]
+```
+
 Remark: the caculation will use *linear interpolation* to estimate the volume between two successive heights.
 
 ## Input message
