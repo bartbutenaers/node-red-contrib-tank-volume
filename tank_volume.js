@@ -40,9 +40,11 @@
         this.cylinderHeight    = parseFloat(config.cylinderHeight);
         this.diameterTop       = parseFloat(config.diameterTop);
         this.diameterBottom    = parseFloat(config.diameterBottom);
-        this.customTable       = config.customTable;
+        this.customTable       = config.customTable || [];
 
         var node = this;
+        
+        if (this.tankType == "") this.tankType = "none";
         
         // A few resources:
         // https://keisan.casio.com/menu/system/000000000280
@@ -377,7 +379,7 @@
                 measuredHeight  = input.measuredHeight;
                 
                 if (customTable.length === 0) {
-                    customTable = input.customTable;
+                    customTable = input.customTable || [];
                 }
             }
             else if (!isNaN(input)) {
