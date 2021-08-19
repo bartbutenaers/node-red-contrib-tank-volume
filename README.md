@@ -4,7 +4,7 @@ A Node-RED node to calculate the volume of different tank types
 ## Install
 Run the following npm command in your Node-RED user directory (typically ~/.node-red):
 ```
-npm install bartbutenaers/node-red-contrib-tank-volume
+npm install node-red-contrib-tank-volume
 ```
 
 ## Support my Node-RED developments
@@ -13,9 +13,11 @@ Please buy my wife a coffee to keep her happy, while I am busy developing Node-R
 
 <a href="https://www.buymeacoffee.com/bartbutenaers" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy my wife a coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
 
-## Node usage
+## Legal disclaimer
 
-***CAUTION: I have done my best to check the accuracy of the calculations in this node, but I must assert the usual disclaimer that it is distributed without warranty, and that you use it at your own risk!***
+***CAUTION: this software is distributed under the Apache License Version 2.0 on an “AS IS” BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied!  Use it at your own risk!***
+
+## Node usage
 
 Inject the measured height (i.e. height of the fluid or the height above the fluid) via the input message, to calculate information about the (partially) filled tank:
 
