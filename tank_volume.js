@@ -713,8 +713,9 @@
 
     RED.nodes.registerType("tank-volume",TankVolumeNode);
     
-    // Make all the available tank images accessible for the node's config screen
-    RED.httpAdmin.get('/tank-volume/:image', RED.auth.needsPermission('tankvolume.read'), function(req, res){
+    // Make all the available tank images accessible for the node's config screen.
+    // Don't check permissions (see https://discourse.nodered.org/t/not-sure-how-to-deal-with-httpadminroot/53473)
+    RED.httpAdmin.get('/tank-volume/:image', function(req, res){
         const fullPath = path.join(__dirname, "tank_images", req.params.image);
         res.sendFile(fullPath);
     });
