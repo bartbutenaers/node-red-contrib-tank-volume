@@ -350,7 +350,9 @@
             var cylinderHeight  = node.cylinderHeight;
             var diameterTop     = node.diameterTop;
             var diameterBottom  = node.diameterBottom;
-            var customTable     = node.customTable;
+            // Deep clone the custom table, to avoid converting the same tank dimensions over and over again.
+            // See https://github.com/bartbutenaers/node-red-contrib-tank-volume/issues/3
+            var customTable     = JSON.parse(JSON.stringify(node.customTable));
             
             try {
                 input = RED.util.getMessageProperty(msg, node.inputField);
@@ -532,7 +534,7 @@
                 return;
             }
             
-            if ((bottomLimit + topLimit) > tankHeight) { 
+            if ((bottomLimit + topLimit) >= tankHeight) { 
                 node.warn("The sum of bottom and top limit (" + (bottomLimit + topLimit) + ") is larger than the tank height (" + tankHeight + ")");
                 return;
             }
