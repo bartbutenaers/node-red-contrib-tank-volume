@@ -81,6 +81,8 @@ Specify the units of the calculated volume.
 ### Top limit
 Specify which distance - measured from the ***top*** of the tank - should not be exceeded, i.e. the fluid level should always be below this level.  See the section "Usable volume and limits" ...
 
+*CAUTION: Note that the top limit is measured from the top (not from the bottom!*
+
 ### Bottom limit
 Specify which distance - measured from the bottom of the tank - should not be exceeded, i.e. the fluid level should always be above this level.  See the section "Usable volume and limits" ...
 
