@@ -264,14 +264,9 @@
             z = height * radiusBottom / (radiusTop - radiusBottom);
             radius_fluidHeight = radiusTop * (fluidHeight + z) / (height + z);
 
-            if (radiusTop > radiusBottom) {
-                return  (1/3) * Math.PI * height * (Math.pow(radius_fluidHeight, 2) + radius_fluidHeight * radiusBottom + Math.pow(radiusBottom, 2));
-            }
-            else {
-                // It is not clear on https://www.omnicalculator.com/construction/tank-volume that the fluidHeight need to be used (instead of height)
-                // for a "cone top" tank.  I could not find the correct formula anywhere, so had to figure it out on my own.  Seems to be working correctly ...
-                return  (1/3) * Math.PI * fluidHeight * (Math.pow(radius_fluidHeight, 2) + radius_fluidHeight * radiusBottom + Math.pow(radiusBottom, 2));
-            }
+            // It is not clear on https://www.omnicalculator.com/construction/tank-volume that the fluidHeight need to be used (instead of height)
+            // for a "cone top" tank.  But Hanna has confirmed that it is always like that...
+            return  (1/3) * Math.PI * fluidHeight * (Math.pow(radius_fluidHeight, 2) + radius_fluidHeight * radiusBottom + Math.pow(radiusBottom, 2));
         } 
         
         function getTotalVolumeSphere(radius) {
