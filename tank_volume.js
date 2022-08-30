@@ -304,6 +304,61 @@
             return 2 * volumeHead +  + getPartialVolumeHorizonalCylinder(radius, length, fluidHeight);
         }
         
+        function getTotalVolumeHorizontalStadium(width, length, height) {
+            if (width == undefined) throw "The width of the horizontal stadium is undefined";
+            if (length == undefined) throw "The length of the horizontal stadium is undefined";
+            if (height == undefined) throw "The height of the horizontal stadium is undefined";
+            
+            var radius = height / 2;
+            var widthPrism = width - 2 * radius;
+
+            return (Math.PI * Math.pow(radius, 2) + height * widthPrism) * length;
+        }
+        
+        function getPartialVolumeHorizontalStadium(width, length, height, fluidHeight) {
+            if (width == undefined) throw "The width of the horizontal stadium is undefined";
+            if (length == undefined) throw "The length of the horizontal stadium is undefined";
+            if (height == undefined) throw "The height of the horizontal stadium is undefined";
+            
+            var radius = height / 2;
+            var widthPrism = width - 2 * radius;
+
+            // Look at the tank as two halve horizontal cylinders, separated by a rectangular prism
+            return getPartialVolumeHorizonalCylinder(radius, length, fluidHeight) + getPartialVolumeRectangularPrism(widthPrism, length, fluidHeight);
+        }
+ 
+        function getTotalVolumeVerticalStadium(width, length, height) {
+            if (width == undefined) throw "The width of the vertical stadium is undefined";
+            if (length == undefined) throw "The length of the vertical stadium is undefined";
+            if (height == undefined) throw "The height of the vertical stadium is undefined";
+            
+            var radius = width / 2;
+            var heightPrism = height - 2 * radius;
+
+            return (Math.PI * Math.pow(radius, 2) + width * heightPrism) * length;
+        }
+        
+        function getPartialVolumeVerticalStadium(width, length, height, fluidHeight) {
+            if (width == undefined) throw "The width of the vertical stadium is undefined";
+            if (length == undefined) throw "The length of the vertical stadium is undefined";
+            if (height == undefined) throw "The height of the vertical stadium is undefined";
+
+            var radius = width / 2;
+            var heightPrism = height - 2 * radius;
+
+            // Look at the tank as two halve horizontal cylinders, separated by a rectangular prism
+            if (fluidHeight < radius) {
+                return getPartialVolumeHorizonalCylinder(radius, length, fluidHeight);
+            }
+            else if (fluidHeight < radius + heightPrism) {
+                return getPartialVolumeHorizonalCylinder(radius, length, radius) + getPartialVolumeRectangularPrism(width, length, fluidHeight - radius);
+            }
+            else {
+                // Since the bottom half cylinder is full and the top half cylinder is partial full, we calculate these both parts as one (because two half cylinders is 1 complete cylinder)
+                return getPartialVolumeHorizonalCylinder(radius, length, fluidHeight - heightPrism) + getTotalVolumeRectangularPrism(width, length, heightPrism);
+            }
+        }
+        
         function getTotalVolumeCustomTable(customTable) {
             // The last volume in the row will be considered as the total volume ...
             var lastRow = customTable[customTable.length-1];
@@ -507,6 +562,12 @@
                 case "horiz_ellip":
                     tankHeight = 2 * radius;
                     break;
+                case "horiz_stad":
+                    tankHeight = height;
+                    break;
+                case "vert_stad":
+                    tankHeight = height;
+                    break;
                 case "custom_table":
                     tankHeight = customTable[customTable.length-1].height;
                     break;
@@ -621,6 +682,18 @@
                         filledVolume = getPartialVolumeHorizontalElliptical(radius, length, fluidHeight);
                         minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeHorizontalElliptical(radius, length, bottomLimit);
                         maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeHorizontalElliptical(radius, length, tankHeight - topLimit);
+                        break;
+                    case "horiz_stad":
+                        totalVolume = getTotalVolumeHorizontalStadium(width, length, height);
+                        filledVolume = getPartialVolumeHorizontalStadium(width, length, height, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeHorizontalStadium(width, length, height, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeHorizontalStadium(width, length, height, tankHeight - topLimit);
+                        break;
+                    case "vert_stad":
+                        totalVolume = getTotalVolumeVerticalStadium(width, length, height);
+                        filledVolume = getPartialVolumeVerticalStadium(width, length, height, fluidHeight);
+                        minimumVolume = (bottomLimit == 0) ? 0 : getPartialVolumeVerticalStadium(width, length, height, bottomLimit);
+                        maximumVolume = (topLimit == 0) ? totalVolume : getPartialVolumeVerticalStadium(width, length, height, tankHeight - topLimit);
                         break;
                     case "custom_table":    
                         totalVolume = getTotalVolumeCustomTable(customTable);
