@@ -39,7 +39,7 @@ The ***output message*** will contain all the required information about the (pa
 ## Tank types
 Currently the following 13 tank types are supported:
 
-![Tank types](https://user-images.githubusercontent.com/14224149/121801020-6a149980-cc35-11eb-8a53-d7ae0e839d9e.png)
+![tank types](https://user-images.githubusercontent.com/14224149/187549203-e79405d6-f859-425c-a55a-e73f33a0ea1d.png)
 
 1. ***Cone bottom***: those tanks are mostly used when total drainage of the tank is required. Or for dry materials (grains, cattle feed ...), or materials that require separation to remove the liquid from the solids. 
 2. ***Cone top***
@@ -48,13 +48,15 @@ Currently the following 13 tank types are supported:
 5. ***Horizontal cylinder***
 6. ***Horizontal elliptical***: typical use case is an oil tank below the ground.
 7. ***Horizontal oval***: typical use case is an oil tank above the ground.
-8. ***Inverse pyramid***: my personal use case is a stormwater subsurface infiltration well, which has been extended after a few years later (by digging a second well below the original well).
-9. ***Rectangular prism (rectangular)***
-10. ***Sphere***: storage of high pressure fluids, due to the even distribution of stress on the sphere surface (without weak points).
-11. ***Vertical capsule***: vertical cylinder with two hemisphere heads, for even distribution of pressure stress in the heads.
-12. ***Vertical cylinder***: a typical use case is a water basin at home.
-13. ***Vertical oval***: typical use case is an oil tank.
-14. ***Custom (table)***: the custom tank type can be selected if none of the previous types can be used.  See the section about "Custom tanks" below...
+8. ***Horizontal stadium***: [stadium](https://en.wikipedia.org/wiki/Stadium_(geometry)) shaped tank.
+9. ***Inverse pyramid***: my personal use case is a stormwater subsurface infiltration well, which has been extended after a few years later (by digging a second well below the original well).
+10. ***Rectangular prism (rectangular)***
+11. ***Sphere***: storage of high pressure fluids, due to the even distribution of stress on the sphere surface (without weak points).
+12. ***Vertical capsule***: vertical cylinder with two hemisphere heads, for even distribution of pressure stress in the heads.
+13. ***Vertical cylinder***: a typical use case is a water basin at home.
+14. ***Vertical oval***: typical use case is an oil tank.
+15. ***Vertical stadium***: [stadium](https://en.wikipedia.org/wiki/Stadium_(geometry)) shaped tank.
+16. ***Custom (table)***: the custom tank type can be selected if none of the previous types can be used.  See the section about "Custom tanks" below...
 
 ## Node properties
 
