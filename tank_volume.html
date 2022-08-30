@@ -26,6 +26,8 @@
         {v:"frustrum"    , t:"Frustum (truncated cone)"},
         {v:"sphere"      , t:"Sphere"},
         {v:"horiz_ellip" , t:"Horizontal elliptical"},
+        {v:"horiz_stad"  , t:"Horizontal stadium"},
+        {v:"vert_stad"   , t:"Vertical stadium"},
         {v:"custom_table", t:"Custom (table)"}
     ];
     
@@ -200,6 +202,16 @@
                     case "horiz_ellip":
                         $("#node-diameter-div").show();                    
                         $("#node-length-div").show();
+                        break;
+                    case "horiz_stad":
+                        $("#node-width-div").show();
+                        $("#node-length-div").show();
+                        $("#node-height-div").show();
+                        break;
+                    case "vert_stad":
+                        $("#node-width-div").show();
+                        $("#node-length-div").show();
+                        $("#node-height-div").show();
                         break;
                     case "custom_table":
                         $("#node-table-div").show();
