@@ -163,6 +163,18 @@ It is possible to configure this node by injecting settings via the input messag
    + *cone_height*
    + *cylinder_height*
    + *diameter_bottom*
+   
+## Tank battery
+Sometimes multiple tanks are combined to create a *tank battery*, in order to have a larger oil capacity:
+
+![tank battery](https://user-images.githubusercontent.com/14224149/187770179-f5578874-e300-4496-a2d6-41abbf6ff278.png)
+
+In some cases these tanks are interconnected, which means the fluid level will be equal in all the tanks.  As a result it is only required to measure a single tank, and multiply the result by the number of tanks:
+
+![tank battery flow](https://user-images.githubusercontent.com/14224149/187770008-037fb305-5d9b-4809-b462-2340da0ff5a5.png)
+```
+[{"id":"03eab8984ca0b78f","type":"tank-volume","z":"6063841c422bab25","name":"","tankType":"vert_stad","inputField":"payload","outputField":"payload","measurement":"fluid","inputUnit1":"cm","inputUnit2":"l","outputUnit":"l","topLimit":"10","bottomLimit":"10","diameter":0,"length":"210","width":"71.4","height":"148","length2":0,"width2":0,"height2":0,"coneHeight":0,"cylinderHeight":0,"diameterTop":0,"diameterBottom":0,"customTable":[],"x":680,"y":1340,"wires":[["a1a0d479c57ca3c4","d12e7ccddc3da34e"]]},{"id":"a1a0d479c57ca3c4","type":"debug","z":"6063841c422bab25","name":"Single tank volume","active":false,"tosidebar":true,"console":false,"tostatus":true,"complete":"payload.usableFilledVolume","targetType":"msg","statusVal":"payload","statusType":"auto","x":910,"y":1400,"wires":[]},{"id":"d12e7ccddc3da34e","type":"function","z":"6063841c422bab25","name":"Volume of 3 tanks","func":"msg.payload = msg.payload.usableFilledVolume * 3; // extract the payload from the object\nreturn msg;","outputs":1,"noerr":0,"initialize":"","finalize":"","libs":[],"x":910,"y":1340,"wires":[["0c9f41fea013eeee"]]},{"id":"0c9f41fea013eeee","type":"debug","z":"6063841c422bab25","name":"Total battery volume","active":false,"tosidebar":true,"console":false,"tostatus":true,"complete":"payload","targetType":"msg","statusVal":"payload","statusType":"auto","x":1160,"y":1400,"wires":[]},{"id":"432e5bbbdc68600a","type":"inject","z":"6063841c422bab25","name":"Set measured depth","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"60","payloadType":"num","x":470,"y":1340,"wires":[["03eab8984ca0b78f"]]}]
+```
 
 ## References
 
