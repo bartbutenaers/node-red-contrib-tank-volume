@@ -169,7 +169,7 @@ Sometimes multiple tanks are combined to create a *tank battery*, in order to ha
 
 ![tank battery](https://user-images.githubusercontent.com/14224149/187770179-f5578874-e300-4496-a2d6-41abbf6ff278.png)
 
-In some cases these tanks are interconnected, which means the fluid level will be equal in all the tanks.  As a result it is only required to measure a single tank, and multiply the result by the number of tanks:
+In some cases these tanks are interconnected, which means the fluid level will be equal in all the tanks.  As a result it is only required to measure a single tank, and multiply the result by the number of tanks.  As can be seen in the following example flow (thanks to [dremeier](https://github.com/dremeier) !!):
 
 ![tank battery flow](https://user-images.githubusercontent.com/14224149/187770008-037fb305-5d9b-4809-b462-2340da0ff5a5.png)
 ```
