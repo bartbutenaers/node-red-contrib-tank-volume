@@ -526,10 +526,10 @@
             // Calculate the total tank height, depending on the tank type
             switch(tankType) {
                 case "horiz_cylin":
-                    tankHeight = length;
+                    tankHeight = 2 * radius;
                     break;
                 case "vert_cylin":
-                    tankHeight = 2 * radius;
+                    tankHeight = height;
                     break;
                 case "rect_prism":
                     tankHeight = height;
